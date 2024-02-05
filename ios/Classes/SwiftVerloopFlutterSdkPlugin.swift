@@ -129,7 +129,7 @@ public class SwiftVerloopFlutterSdkPlugin: NSObject, FlutterPlugin, VLEventDeleg
                 return
             }
             verloop = VerloopSDK(config: config!)
-            verloop?.observeLiveChatEventsOn(vlEventDelegate: self)
+            result(1)
         case "showChat":
             if verloop == nil {
                 result(FlutterError.init(code: SwiftVerloopFlutterSdkPlugin.ERROR_101,
@@ -137,22 +137,89 @@ public class SwiftVerloopFlutterSdkPlugin: NSObject, FlutterPlugin, VLEventDeleg
                                          details: "call buildVerloop before calling showChat"))
                 return
             }
-            previousWindow = UIApplication.shared.keyWindow
-            window.isOpaque = true
+            let controller = verloop!.getNavController()
+            UIApplication.visibleViewController()?.present(controller, animated: true)
+            result(1)
+//             previousWindow = UIApplication.shared.keyWindow
+//             window.isOpaque = true
 //             window.backgroundColor = UIColor.white
 //             window.frame = UIScreen.main.bounds
 
-            window.windowLevel = UIWindow.Level.normal + 1
-            window.rootViewController = verloop!.getNavController()
-            window.makeKeyAndVisible()
+//             window.windowLevel = UIWindow.Level.normal + 1
+//             window.rootViewController = verloop!.getNavController()
+//             window.makeKeyAndVisible()
         default:
             result(FlutterMethodNotImplemented)
     }
   }
-  public func onChatMinimized() {
-      window.resignKey()
-      previousWindow?.makeKeyAndVisible()
-      previousWindow = nil
-      window.windowLevel = UIWindow.Level.normal - 30
-  }
+//   public func onChatMinimized() {
+//       window.resignKey()
+//       previousWindow?.makeKeyAndVisible()
+//       previousWindow = nil
+//       window.windowLevel = UIWindow.Level.normal - 30
+//   }
+}
+
+extension UIApplication {
+    /// Key window
+    static func keyWindow() -> UIWindow? {
+        UIApplication.shared.windows.first { $0.isKeyWindow }
+        // return UIApplication.shared.keyWindow
+    }
+
+    /// App window
+    static func appWindow() -> UIWindow {
+        if let window: UIWindow = (UIApplication.shared.delegate?.window)! {
+            return window
+        }
+        return UIWindow()
+    }
+
+    /// Root view contoller
+    static func rootViewController() -> UIViewController? {
+        // return self.appWindow().rootViewController
+        return UIApplication.keyWindow()?.rootViewController
+    }
+
+    /// Visible view controller
+    static func visibleViewController(base: UIViewController? = rootViewController()) -> UIViewController? {
+        // return self.rootViewController()?.findContentViewControllerRecursively()
+        if let nav = base as? UINavigationController {
+            return UIApplication.visibleViewController(base: nav.visibleViewController)
+        }
+        if let tab = base?.children.first as? UITabBarController {
+            if let selected = tab.selectedViewController {
+                return UIApplication.visibleViewController(base: selected)
+            }
+        }
+        if let presented = base?.presentedViewController {
+            return UIApplication.visibleViewController(base: presented)
+        }
+        return base
+    }
+
+    /// Visible navigation controller
+    static func visibleNavigationController() -> UINavigationController? {
+        return self.visibleViewController()?.navigationController
+    }
+
+    /// Visible tabbar controller
+    static func visibleTabBarController() -> UITabBarController? {
+        return self.visibleViewController()?.tabBarController
+    }
+
+    /// Visible split view controller
+    static func visibleSplitViewController() -> UISplitViewController? {
+        return self.visibleViewController()?.splitViewController
+    }
+
+    /// Push or present view contorller
+    static func pushOrPresentViewController(viewController: UIViewController, animated:Bool) {
+        if let nav:UINavigationController = self.visibleNavigationController() {
+            nav.pushViewController(viewController, animated: animated)
+        } else {
+            self.visibleViewController()?.present(viewController, animated: animated, completion: nil)
+        }
+    }
+
 }
